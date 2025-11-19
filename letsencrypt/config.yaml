@@ -177,4 +177,5 @@ schema:
   test_cert: bool?
   eab_kid: str?
   eab_hmac_key: str?
+  preferred_profile: str?
 startup: once
