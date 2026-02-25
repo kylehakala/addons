@@ -1,13 +1,22 @@
 import asyncio
 import argparse
 import datetime
+import re
 import zigpy.serial
 from pathlib import Path
+from serialx import PinState
 
 from enum import Enum
-from universal_silabs_flasher.spinel import SpinelProtocol, CommandID, PropertyID
+from universal_silabs_flasher.spinel import (
+    SpinelProtocol,
+    CommandID,
+    PropertyID,
+    ResetReason,
+)
 
 CONNECT_TIMEOUT = 10
+AFTER_DISCONNECT_DELAY = 1
+SETTINGS_FILE_PATTERN = re.compile(r"^\d+_[0-9a-f]+\.data$")
 
 
 class OtbrSettingsKey(Enum):
@@ -68,7 +77,9 @@ def is_valid_otbr_settings_file(settings: list[tuple[OtbrSettingsKey, bytes]]) -
     return {OtbrSettingsKey.ACTIVE_DATASET} <= {key for key, _ in settings}
 
 
-async def get_adapter_hardware_addr(port: str, baudrate: int = 460800) -> str:
+async def get_adapter_hardware_addr(
+    port: str, baudrate: int = 460800, flow_control: str | None = None
+) -> str:
     loop = asyncio.get_running_loop()
 
     async with asyncio.timeout(CONNECT_TIMEOUT):
@@ -77,8 +88,16 @@ async def get_adapter_hardware_addr(port: str, baudrate: int = 460800) -> str:
             protocol_factory=SpinelProtocol,
             url=port,
             baudrate=baudrate,
+            flow_control=flow_control,
+            # OTBR uses `uart-init-deassert` when flow control is disabled
+            rtsdtr_on_open=(
+                PinState.HIGH if flow_control == "hardware" else PinState.LOW
+            ),
+            rtsdtr_on_close=PinState.LOW,
         )
         await protocol.wait_until_connected()
+
+    await protocol.reset(ResetReason.STACK)
 
     try:
         rsp = await protocol.send_command(
@@ -119,16 +138,34 @@ async def main() -> None:
     parser.add_argument(
         "--baudrate", type=int, default=460800, help="Baudrate of the new adapter"
     )
+    parser.add_argument(
+        "--flow-control",
+        type=str,
+        default="none",
+        help="Flow control for the serial connection (hardware, software, or none)",
+    )
 
     args = parser.parse_args()
 
+    flow_control = args.flow_control
+
+    if flow_control == "none":
+        flow_control = None
+
     # First, read the hardware address of the new adapter
-    hwaddr = await get_adapter_hardware_addr(args.adapter, args.baudrate)
+    hwaddr = await get_adapter_hardware_addr(
+        port=args.adapter,
+        baudrate=args.baudrate,
+        flow_control=flow_control,
+    )
 
     # Then, look at existing settings
     all_settings = []
 
     for settings_path in args.data_dir.glob("*.data"):
+        if not SETTINGS_FILE_PATTERN.match(settings_path.name):
+            continue
+
         mod_time = settings_path.stat().st_mtime
         otbr_settings = parse_otbr_settings(settings_path.read_bytes())
 
@@ -180,6 +217,8 @@ async def main() -> None:
 
     expected_settings_path.write_bytes(serialize_otbr_settings(new_settings))
     print(f"Wrote new settings file to {expected_settings_path}")
+
+    await asyncio.sleep(AFTER_DISCONNECT_DELAY)
 
 
 if __name__ == "__main__":
