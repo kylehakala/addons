@@ -25,19 +25,6 @@ if bashio::config.exists 'dns.google_creds'; then
     fi
 fi
 
-if bashio::config.exists 'dns.azure_config'; then
-    bashio::log.warning "Using legacy certbot-dns-azure plugin (DEPRECATED)"
-    bashio::log.warning "The 'azure_config' option will be removed in a future version."
-    AZURE_CREDS="$(bashio::config 'dns.azure_config')"
-    if [ -f "/share/${AZURE_CREDS}" ]; then
-        cp -f "/share/${AZURE_CREDS}" "/data/azure_creds"
-        chmod 0600 "/data/azure_creds"
-    else
-        bashio::log.error "Azure credentials file '${AZURE_CREDS}' not found in /share directory"
-        exit 1
-    fi
-fi
-
 # Warn/fail on deprecated options
 if bashio::config.has_value 'dns.cloudns_sub_auth_user'; then
     bashio::log.error "cloudns_sub_auth_user is not supported since Letsencrypt Home Assistant App v6.0.0."

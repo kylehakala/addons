@@ -1,5 +1,5 @@
 ---
-version: 6.1.0
+version: 6.0.4
 breaking_versions: [5.3.0, 6.0.0]
 slug: letsencrypt
 name: Let's Encrypt
@@ -36,7 +36,6 @@ schema:
     aws_access_key_id: str?
     aws_region: str?
     aws_secret_access_key: str?
-    azure_config: str?
     cloudflare_api_key: str?
     cloudflare_api_token: str?
     cloudflare_email: email?
@@ -73,8 +72,6 @@ schema:
     godaddy_key: str?
     godaddy_secret: str?
     google_creds: str?
-    he_pass: str?
-    he_user: str?
     hetzner_api_token: str?
     infomaniak_api_token: str?
     inwx_password: str?
@@ -118,7 +115,6 @@ schema:
     porkbun_secret: str?
     propagation_seconds: int(60,3600)?
     provider: "list(\
-      dns-azure|\
       dns-cloudflare|\
       dns-cloudns|\
       dns-desec|\
@@ -136,7 +132,6 @@ schema:
       dns-gehirn|\
       dns-godaddy|\
       dns-google|\
-      dns-he|\
       dns-hetzner|\
       dns-infomaniak|\
       dns-inwx|\

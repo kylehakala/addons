@@ -31,9 +31,6 @@ VERBOSE=$(bashio::config 'verbose')
 # Legacy providers not supported by lego/certbot-dns-multi
 LEGACY_PROVIDERS="dns-eurodns dns-gehirn dns-noris"
 
-# Deprecated providers not having feature parity in lego/certbot-dns-multi
-DEPRECATED_PROVIDERS="dns-azure dns-he"
-
 if [ "${CHALLENGE}" == "dns" ]; then
     bashio::config.require 'dns.provider'
     bashio::log.info "Selected DNS Provider: ${DNS_PROVIDER}"
@@ -79,30 +76,6 @@ if [ "${CHALLENGE}" == "dns" ]; then
                 echo "dns_noris_token = $(bashio::config 'dns.noris_token')" > "${DNS_API_KEY}"
 
                 ACME_ARGUMENTS+=("--authenticator" "${DNS_PROVIDER}" "--${DNS_PROVIDER}-credentials" "${DNS_API_KEY}" "--${DNS_PROVIDER}-propagation-seconds" "${PROPAGATION_SECONDS}")
-                ;;
-        esac
-    elif [[ " ${DEPRECATED_PROVIDERS} " =~ " ${DNS_PROVIDER} " ]]; then
-        bashio::log.warning "Using deprecated certbot plugin for ${DNS_PROVIDER}"
-
-        case "${DNS_PROVIDER}" in
-            # Azure
-            'dns-azure')
-                bashio::log.warning "The dns-azure provider is deprecated, please migrate to generic lego configuration using dns-lego provider"
-
-                # File is copied during container init by file-structure.sh
-                ACME_ARGUMENTS+=("--authenticator" "dns-azure" "--dns-azure-config" "/data/azure_creds" "--dns-azure-propagation-seconds" "${PROPAGATION_SECONDS}")
-                ;;
-            # Hurricane Electric DNS
-            'dns-he')
-                bashio::log.warning "The dns-he provider is deprecated, please migrate to generic lego configuration using dns-lego provider"
-
-                bashio::config.require 'dns.he_user'
-                bashio::config.require 'dns.he_pass'
-
-                echo -e "dns_hurricane_electric_pass = $(bashio::config 'dns.he_pass')\n" \
-                      "dns_hurricane_electric_user = $(bashio::config 'dns.he_user')" > "${DNS_API_KEY}"
-
-                ACME_ARGUMENTS+=("--authenticator" "dns-hurricane_electric" "--dns-hurricane_electric-credentials" "/data/dnsapikey" "--dns-hurricane_electric-propagation-seconds" "${PROPAGATION_SECONDS}")
                 ;;
         esac
     else
