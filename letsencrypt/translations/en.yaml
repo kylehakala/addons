@@ -20,8 +20,8 @@ configuration:
   preferred_profile:
     name: Certificate Profile
     description: >-
-      Request the certificate using a profile available by the ACME server. If 
-      the profile is not available, or this value is not set, the ACME server 
+      Request the certificate using a profile available by the ACME server. If
+      the profile is not available, or this value is not set, the ACME server
       will use its default profile.
   acme_server:
     name: Custom ACME Server
